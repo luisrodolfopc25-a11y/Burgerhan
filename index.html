@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BurgerHan - Premium POS</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f8f9fa; color: #212529; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
+        /* Pantalla de Selección Inicial */
+        .welcome-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000000; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
+        .welcome-title { color: #ffffff; font-size: 28px; font-weight: 800; letter-spacing: 3px; margin-bottom: 30px; text-transform: uppercase; text-align: center; }
+        .welcome-buttons { display: flex; gap: 20px; width: 90%; max-width: 500px; }
+        .welcome-btn { flex: 1; padding: 24px; font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; border: 2px solid #ffffff; background: transparent; color: #ffffff; cursor: pointer; border-radius: 8px; transition: all 0.2s ease; text-align: center; }
+        .welcome-btn:hover { background: #ffffff; color: #000000; }
+        .welcome-btn.btn-delivery { border-color: #ffc107; color: #ffc107; }
+        .welcome-btn.btn-delivery:hover { background: #ffc107; color: #000000; }
+
+        header { background: #000000; color: #ffffff; padding: 12px 24px; font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; display: flex; justify-content: space-between; align-items: center; }
+        .brand-wrapper { display: flex; align-items: center; gap: 12px; }
+        .brand-wrapper span { cursor: pointer; }
+        .cloud-status { font-size: 11px; font-weight: 600; color: #a0a0a0; letter-spacing: 1px; display: flex; align-items: center; gap: 6px; }
+        .cloud-status::before { content: ""; display: inline-block; width: 6px; height: 6px; background-color: #22c55e; border-radius: 50%; }
+
+        .tabs-container { display: flex; background: #ffffff; padding: 12px 24px 0 24px; gap: 6px; border-bottom: 1px solid #e9ecef; overflow-x: auto; scrollbar-width: none; }
+        .tabs-container::-webkit-scrollbar { display: none; }
+        .tab-btn { padding: 10px 18px; border: 1px solid #e9ecef; border-bottom: none; background: #f8f9fa; color: #6c757d; cursor: pointer; font-weight: 700; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; transition: all 0.2s ease; border-radius: 6px 6px 0 0; min-width: 110px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; text-align: center; }
+        .tab-btn.active { background: #ffffff; color: #000000; border-color: #e9ecef; border-bottom: 1px solid #ffffff; position: relative; z-index: 2; font-weight: 800; }
+
+        .main-layout { display: flex; flex: 1; overflow: hidden; background: #ffffff; }
+        
+        .left-panel { flex: 2.2; display: flex; flex-direction: column; border-right: 1px solid #e9ecef; height: 100%; overflow-y: auto; background: #f8f9fa; }
+        
+        .section-block { background: #ffffff; padding: 20px 24px; border-bottom: 1px solid #e9ecef; }
+        .section-block.bg-grey { background: #f8f9fa; }
+        
+        .block-title { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #ffc107; background: #000; padding: 6px 12px; border-radius: 4px; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 14px; }
+
+        .form-row { display: flex; gap: 16px; margin-bottom: 12px; }
+        .form-row:last-child { margin-bottom: 0; }
+        .form-group { flex: 1; display: flex; flex-direction: column; }
+        .form-group label { font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; color: #495057; }
+        .form-group label span { color: #dc3545; }
+        .form-group input, .form-group select { padding: 10px 14px; border: 1px solid #ced4da; background: #ffffff; color: #212529; font-size: 13px; font-weight: 600; outline: none; transition: all 0.2s ease; border-radius: 6px; }
+        .form-group input:focus, .form-group select:focus { border-color: #000000; box-shadow: 0 0 0 1px #000000; }
+
+        .category-nav { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+        .cat-toggle-btn { background: #ffffff; color: #495057; border: 1px solid #ced4da; padding: 8px 14px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; text-align: center; transition: all 0.2s ease; border-radius: 6px; }
+        .cat-toggle-btn:hover { background: #f8f9fa; border-color: #adb5bd; }
+        .cat-toggle-btn.active { background: #000000; color: #ffffff; border-color: #000000; }
+
+        .products-view-container { min-height: 260px; max-height: 400px; overflow-y: auto; background: #ffffff; border: 1px solid #e9ecef; padding: 16px; border-radius: 8px; }
+        .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; display: none; }
+        .products-grid.active { display: grid; }
+        
+        .prod-btn { background: #ffffff; color: #212529; border: 1px solid #e2e8f0; padding: 16px 14px; text-align: left; cursor: pointer; transition: all 0.2s ease; display: flex; flex-direction: column; justify-content: space-between; min-height: 95px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.01); position: relative; }
+        .prod-btn:hover { border-color: #94a3b8; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
+        .prod-btn .prod-title { font-size: 12px; font-weight: 700; color: #1e293b; line-height: 1.4; }
+        .prod-btn .prod-price { color: #000000; font-weight: 800; margin-top: 8px; font-size: 13px; }
+        .prod-btn .prod-price.action-needed { color: #2563eb; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .right-panel { flex: 0.95; display: flex; flex-direction: column; background: #ffffff; height: 100%; padding: 24px; overflow-y: auto; border-left: 1px solid #e9ecef; }
+        .panel-right-title { font-size: 13px; font-weight: 800; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #ffc107; background: #000; padding: 6px 12px; border-radius: 4px; display: inline-block; align-self: flex-start; }
+        
+        .ticket-wrapper { display: flex; flex-direction: column; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 12px; width: 100%; height: auto; box-shadow: 0 1px 3px rgba(0,0,0,0.02); position: relative; }
+        
+        .ticket-interactive-line { position: relative; display: block; cursor: pointer; border-radius: 4px; }
+        .ticket-interactive-line:hover { background-color: #fff5f5; }
+        .ticket-delete-trigger { display: none; position: absolute; right: 2px; top: 2px; background: #dc3545; color: #ffffff; border: none; font-size: 11px; font-weight: 900; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-family: sans-serif; z-index: 10; }
+        .ticket-interactive-line:hover .ticket-delete-trigger { display: block; }
+
+        .ticket-view { font-family: "Courier New", Courier, monospace; font-size: 14px; font-weight: 700; white-space: pre-wrap; word-break: break-all; line-height: 1.4; color: #000000; width: 100%; }
+        
+        .btn-print { background: #000000; color: #ffffff; border: none; padding: 14px; width: 100%; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; cursor: pointer; margin-top: 16px; transition: all 0.2s ease; border-radius: 6px; text-align: center; }
+        .btn-print:hover { background: #212529; }
+        .btn-clear { background: transparent; color: #6c757d; border: 1px solid #ced4da; padding: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; margin-top: 8px; width: 100%; transition: all 0.2s ease; border-radius: 6px; }
+        .btn-clear:hover { color: #000000; border-color: #000000; background: #f8f9fa; }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(2px); }
+        .modal-content { background: #ffffff; border: 1px solid #e9ecef; padding: 24px; width: 92%; max-width: 540px; max-height: 88vh; overflow-y: auto; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .modal-title { font-size: 15px; font-weight: 800; border-bottom: 1px solid #e9ecef; padding-bottom: 12px; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; color: #000000; }
+        
+        .option-section { margin-bottom: 14px; border: 1px solid #e9ecef; padding: 14px; background: #f8f9fa; border-radius: 6px; }
+        .option-section h4 { margin-bottom: 10px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px dashed #dee2e6; padding-bottom: 4px; color: #ffc107; background: #000; padding: 4px 8px; border-radius: 3px; display: inline-block; }
+        
+        .checkbox-group, .radio-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px; }
+        .checkbox-group label, .radio-group label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; color: #212529; }
+        .checkbox-group input, .radio-group input { accent-color: #000000; width: 15px; height: 15px; cursor: pointer; }
+
+        .comment-box { width: 100%; padding: 10px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 13px; font-weight: 600; outline: none; resize: none; font-family: inherit; }
+        .comment-box:focus { border-color: #000000; box-shadow: 0 0 0 1px #000000; }
+
+        .creams-grid-layout { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 6px; }
+        .cream-cycle-btn { background: #ffffff; border: 1px solid #ced4da; color: #495057; padding: 8px 4px; font-size: 10px; font-weight: 700; border-radius: 4px; cursor: pointer; text-align: center; transition: all 0.15s ease; user-select: none; text-transform: uppercase; }
+        .cream-cycle-btn.state-normal { background: #000000; border-color: #000000; color: #ffffff; }
+        .cream-cycle-btn.state-extra { background: #198754; border-color: #198754; color: #ffffff; }
+        .cream-cycle-btn.state-poco { background: #ffc107; border-color: #ffc107; color: #000000; }
+
+        .modal-actions { display: flex; justify-content: space-between; margin-top: 20px; gap: 10px; }
+        .btn-modal { flex: 1; padding: 12px; font-weight: 800; text-transform: uppercase; font-size: 11px; cursor: pointer; transition: all 0.2s ease; border-radius: 6px; letter-spacing: 1px; }
+        .btn-add { background: #000000; color: #ffffff; border: none; }
+        .btn-add:hover { background: #212529; }
+        .btn-close { background: transparent; color: #6c757d; border: 1px solid #ced4da; }
+        .btn-close:hover { color: #000000; border-color: #000000; background: #f8f9fa; }
+        
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #f8f9fa; }
+        ::-webkit-scrollbar-thumb { background: #ced4da; border-radius: 10px; }
+
+        @media (max-width: 768px) {
+            .main-layout { flex-direction: column; overflow-y: auto; }
+            .left-panel { flex: none; height: auto; border-right: none; }
+            .right-panel { flex: none; height: auto; border-left: none; padding: 16px; }
+            .products-view-container { max-height: 320px; }
+            .welcome-buttons { flex-direction: column; }
+        }
+
+        /* CONFIGURACIÓN CRÍTICA PARA IMPRESIÓN LIMPIA */
+        @page { 
+            margin: 0mm !important; 
+        }
+
+        @media print {
+            html, body {
+                background: #ffffff !important;
+                color: #000000 !important;
+                height: auto !important;
+                overflow: visible !important;
+                margin: 0mm !important;
+                padding: 0mm !important;
+            }
+            /* Ocultar absolutamente toda la interfaz gráfica de la aplicación */
+            .welcome-screen, header, .tabs-container, .left-panel, .panel-right-title, .btn-print, .btn-clear, .modal, #bloque-render-imagen-oculto {
+                display: none !important;
+            }
+            /* Posicionar el panel del ticket en pantalla completa para la ticketera */
+            .right-panel {
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 280px !important; /* Ancho ideal para ticketera térmica estándar */
+                padding: 0mm !important;
+                margin: 0mm !important;
+                border: none !important;
+                overflow: visible !important;
+            }
+            .ticket-wrapper {
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0mm !important;
+                margin: 0mm !important;
+                width: 100% !important;
+            }
+            .ticket-view pre, .ticket-interactive-line pre {
+                font-family: "Courier New", Courier, monospace !important;
+                font-size: 13px !important;
+                font-weight: bold !important;
+                color: #000000 !important;
+            }
+            .ticket-delete-trigger {
+                display: none !important;
+            }
+        }
+
+        /* CONTENEDOR ESPEJO PARA MESA (IMAGEN OCULTA) */
+        #bloque-render-imagen-oculto {
+            position: absolute;
+            left: -9999px;
+            top: -9999px;
+            width: 380px; 
+            background: #ffffff;
+            padding: 16px;
+            color: #000000;
+        }
+        #bloque-render-imagen-oculto pre {
+            font-family: "Courier New", Courier, monospace;
+            font-size: 15px;
+            font-weight: bold;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="welcome-screen" id="app-welcome-screen">
+        <h1 class="welcome-title">🍔 BURGER HAN POS 🍔</h1>
+        <div class="welcome-buttons">
+            <button class="welcome-btn" onclick="initSystemWorkflow('Mesa')">🍽️ Pedido Mesa</button>
+            <button class="welcome-btn btn-delivery" onclick="initSystemWorkflow('Delivery')">🛵 Delivery / Recoger</button>
+        </div>
+    </div>
+
+    <div id="app-main-workflow" style="display: none; flex-direction: column; flex: 1; overflow: hidden;">
+        <header>
+            <div class="brand-wrapper">
+                <span onclick="resetToWelcomeScreen()">BURGER HAN ⬅️</span>
+            </div>
+            <div class="cloud-status" id="live-clock">CONECTADO A NUBE</div>
+        </header>
+
+        <div class="tabs-container" id="tabs-wrapper">
+            <button class="tab-btn active" id="btn-tab-0" onclick="switchTab(0)">PEDIDO 1</button>
+            <button class="tab-btn" id="btn-tab-1" onclick="switchTab(1)">PEDIDO 2</button>
+            <button class="tab-btn" id="btn-tab-2" onclick="switchTab(2)">PEDIDO 3</button>
+            <button class="tab-btn" id="btn-tab-3" onclick="switchTab(3)">PEDIDO 4</button>
+        </div>
+
+        <div class="main-layout">
+            <div class="left-panel">
+                
+                <div class="section-block" id="data-input-zone"></div>
+
+                <div class="section-block bg-grey">
+                    <div class="block-title">🍔 2. Selección de Productos</div>
+                    <div class="category-nav">
+                        <button class="cat-toggle-btn active" id="cat-btn-hamburguesas" onclick="showCategory('hamburguesas')">Hamburguesas</button>
+                        <button class="cat-toggle-btn" id="cat-btn-salchipapas" onclick="showCategory('salchipapas')">Salchipapas</button>
+                        <button class="cat-toggle-btn" id="cat-btn-broaster" onclick="showCategory('broaster')">Broaster</button>
+                        <button class="cat-toggle-btn" id="cat-btn-alitas" onclick="showCategory('alitas')">Alitas</button>
+                        <button class="cat-toggle-btn" id="cat-btn-parrillas" onclick="showCategory('parrillas')">Parrilla</button>
+                        <button class="cat-toggle-btn" id="cat-btn-brasa" onclick="showCategory('brasa')">Pollo a la Brasa</button>
+                        <button class="cat-toggle-btn" id="cat-btn-combos" onclick="showCategory('combos')">Combos</button>
+                        <button class="cat-toggle-btn" id="cat-btn-pizzas" onclick="showCategory('pizzas')">Pizzas</button>
+                        <button class="cat-toggle-btn" id="cat-btn-jugos" onclick="showCategory('jugos')">Bebidas/Jugos</button>
+                        <button class="cat-toggle-btn" id="cat-btn-frappes" onclick="showCategory('frappes')">Frappés</button>
+                        <button class="cat-toggle-btn" id="cat-btn-guarniciones" onclick="showCategory('guarniciones')">Guarniciones</button>
+                    </div>
+
+                    <div class="products-view-container">
+                        <div class="products-grid active" id="grid-hamburguesas"></div>
+                        <div class="products-grid" id="grid-salchipapas"></div>
+                        <div class="products-grid" id="grid-broaster"></div>
+                        <div class="products-grid" id="grid-alitas"></div>
+                        <div class="products-grid" id="grid-parrillas"></div>
+                        <div class="products-grid" id="grid-brasa"></div>
+                        <div class="products-grid" id="grid-combos"></div>
+                        <div class="products-grid" id="grid-pizzas"></div>
+                        <div class="products-grid" id="grid-jugos"></div>
+                        <div class="products-grid" id="grid-frappes"></div>
+                        <div class="products-grid" id="grid-guarniciones"></div>
+                    </div>
+                </div>
+
+                <div class="section-block">
+                    <div class="block-title">💳 3. Método de Pago y Cierre</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Método de Pago</label>
+                            <select id="sel-payment" onchange="handlePaymentShift()">
+                                <option value="Yape">Yape / Plin 📲</option>
+                                <option value="Efectivo">Efectivo 💵</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="group-cash-amount" style="display:none;">
+                            <label>Efectivo Recibido</label>
+                            <input type="number" id="inp-cash" placeholder="S/ 0.00" oninput="captureFormData()">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="right-panel">
+                <div class="panel-right-title">Estructura del Pedido</div>
+                <div class="ticket-wrapper">
+                    <div class="ticket-view" id="ticket-render">CARGANDO...</div>
+                </div>
+                <button class="btn-print" id="main-action-trigger" onclick="executePrint()">PROCESAR IMPRESIÓN</button>
+                <button class="btn-clear" onclick="clearCurrentOrder()">CANCELAR ORDEN</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="modal-modifier">
+        <div class="modal-content">
+            <div class="modal-title" id="mod-product-title">CONFIGURAR PRODUCTO</div>
+            <div id="mod-dynamic-fields"></div>
+            <div class="modal-actions">
+                <button class="btn-modal btn-close" onclick="closeModifier()">CANCELAR</button>
+                <button class="btn-modal btn-add" onclick="commitProductToOrder()">CONFIRMAR</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="bloque-render-imagen-oculto"></div>
+
+    <script>
+        const CREAMS_CLASSIC = ["Mayonesa", "Ketchup", "Mostaza", "Ají", "Huacatay", "Tártara", "Golf", "Aceituna"];
+        const CREAMS_PARRILLERAS = ["Barbiquiu", "Acevichada", "Ají Parrillero", "Rocoto"];
+        const ALL_CREAMS_LIST = [...CREAMS_CLASSIC, ...CREAMS_PARRILLERAS];
+
+        const CREAM_MAP = {
+            "Mayonesa": "MAY", "Ketchup": "KET", "Mostaza": "MOS", "Ají": "AJÍ",
+            "Huacatay": "HUA", "Tártara": "TAR", "Golf": "GOL", "Barbiquiu": "BBQ",
+            "Acevichada": "ACV", "Aceituna": "ACE", "Ají Parrillero": "A.P", "Rocoto": "ROC"
+        };
+
+        const DATABASE = {
+            hamburguesas: [
+                { id: "hp1", name: "La Tóxica", price: 16.50 }, { id: "hp2", name: "La Hawaiana", price: 13.50 },
+                { id: "hp3", name: "El Sugar Daddy", price: 13.00 }, { id: "hp4", name: "Mata Hambre", price: 12.00 },
+                { id: "hp5", name: "La Sugar Mommy", price: 11.50 }, { id: "hp6", name: "La Pizzera", price: 11.00 },
+                { id: "hp7", name: "La Parrillera a lo Pobre", price: 10.50 }, { id: "ht1", name: "Cheese Filete", price: 8.50 }, 
+                { id: "ht2", name: "Pollo + Huevo", price: 8.00 }, { id: "ht3", name: "Especial", price: 7.50 }, 
+                { id: "ht4", name: "La Sencilla", price: 7.00 }, { id: "ht5", name: "Royal", price: 6.50 }, 
+                { id: "ht6", name: "Pollo Deshilach.", price: 6.00 }, { id: "ht7", name: "Carne Simple", price: 4.50 }, 
+                { id: "ht8", name: "Hot Dog", price: 4.00 }
+            ],
+            combos: [
+                { id: "cb1", name: "Combo 1", price: 45.00 }, { id: "cb2", name: "Combo 2", price: 45.00 },
+                { id: "cb3", name: "Combo 3", price: 45.00 }, { id: "cb4", name: "Combo 4", price: 48.00 },
+                { id: "cb5", name: "Combo 5", price: 47.00 }, { id: "cb7", name: "Combo 7", price: 57.00 },
+                { id: "cb8", name: "Combo 8", price: 60.00 }, { id: "cb9", name: "Combo 9", price: 100.00 },
+                { id: "cb10", name: "Combo 10", price: 140.00 }, { id: "cb11", name: "Combo 11", price: 155.00 }
+            ],
+            broaster: [
+                { id: "b1", name: "Mostrito", price: 14.00 }, { id: "b2", name: "Pollo Broaster", price: 12.00 }
+            ],
+            alitas: [
+                { id: "al1", name: "Alitas x8", price: 24.00 }, { id: "al2", name: "Alitas + Chaufa", price: 16.00 }, { id: "al3", name: "Alitas x4", price: 14.00 }
+            ],
+            parrillas: [
+                { id: "pe1", name: "Pechuga Pulpín", price: 15.00 }, { id: "pe2", name: "Económica + Arroz", price: 18.00 },
+                { id: "pp1", name: "Clásica (Pierna)", price: 19.00 }, { id: "pp2", name: "Pechuga", price: 23.00 },
+                { id: "pp3", name: "Pechuga + Queso", price: 27.00 }, { id: "pp4", name: "Pechuga + Q. + T.", price: 30.00 },
+                { id: "pp5", name: "Pechuga Hawaiana", price: 34.00 }, { id: "pp6", name: "Pechuga Tropical", price: 37.00 },
+                { id: "pc1", name: "Cerdo Clásica", price: 20.00 }, { id: "pc2", name: "2 Tiras Cerdo", price: 27.00 },
+                { id: "pr1", name: "Res Clásica (300g)", price: 21.00 }, { id: "pr2", name: "2 Tiras Res", price: 27.00 },
+                { id: "pr3", name: "Trilogía Peruana", price: 38.00 }, { id: "pr4", name: "Rachi", price: 24.00 }, 
+                { id: "pr5", name: "Anticucho Mixto", price: 22.00 }, { id: "pr6", name: "Anticucho Corazón", price: 20.00 },
+                { id: "pr7", name: "Mollejitas", price: 19.00 }
+            ],
+            brasa: [
+                { id: "br1", name: "Pollo Brasa 1", price: 50.00 }, { id: "br2", name: "Pollo Brasa 1/2", price: 26.00 }, 
+                { id: "br3", name: "Pollo Brasa 1/4", price: 14.00 }, { id: "br4", name: "Mostrazo Parrilla", price: 18.00 }
+            ],
+            salchipapas: [
+                { id: "s1", name: "Salchi Filete", price: 16.00 }, { id: "s2", name: "Salchi Erótica", price: 13.50 },
+                { id: "s3", name: "Salchipapa King", price: 12.00 }, { id: "s4", name: "Salchi a lo Pobre", price: 11.50 },
+                { id: "s5", name: "Salchi Simple", price: 9.00 }
+            ],
+            pizzas: [
+                { id: "pz1", name: "Hawaiana Fam.", price: 23.00 }, { id: "pz2", name: "Pepperoni Fam.", price: 23.00 },
+                { id: "pz3", name: "Americana Fam.", price: 22.00 }, { id: "pz4", name: "Hawaiana Pers.", price: 17.00 },
+                { id: "pz5", name: "Pepperoni Pers.", price: 17.00 }, { id: "pz6", name: "Americana Pers.", price: 15.00 }
+            ],
+            jugos: [
+                { id: "be1", name: "Chicha", price: 3.50, subType: "fresco" },
+                { id: "be2", name: "Maracuyá", price: 3.00, subType: "fresco" },
+                { id: "be3", name: "Inka", price: 0.00, subType: "gaseosa" },
+                { id: "be4", name: "Coca", price: 0.00, subType: "gaseosa" },
+                { id: "be5", name: "Fanta", price: 0.00, subType: "gaseosa" },
+                { id: "be6", name: "Sprite", price: 0.00, subType: "gaseosa" },
+                { id: "be7", name: "Agua San Luis", price: 2.50 },
+                { id: "jg1", name: "Jugo Papaya", price: 6.00 }, { id: "jg2", name: "Jugo Piña", price: 5.00 },
+                { id: "jg3", name: "Jugo Surtido", price: 6.00 }, { id: "jg4", name: "Jugo Fresa", price: 7.00 },
+                { id: "jg5", name: "Fresa con Leche", price: 8.00 }
+            ],
+            frappes: [
+                { id: "fr1", name: "Frappé Chocolate", price: 10.00 }, { id: "fr2", name: "Frappé Choco Lúcuma", price: 10.00 },
+                { id: "fr3", name: "Frappé Oreo", price: 10.00 }, { id: "fr4", name: "Frappé Fresa", price: 10.00 },
+                { id: "fr5", name: "Frappé Moka", price: 10.00 }, { id: "fr6", name: "Frappé Caramelo", price: 10.00 }
+            ],
+            guarniciones: [
+                { id: "g1", name: "1 Palito de Anticucho", price: 10.00 },
+                { id: "g2", name: "1 Chorizo Artesanal", price: 4.00 },
+                { id: "g3", name: "Porción de Ensalada", price: 3.50 },
+                { id: "g4", name: "Porción Papas Fritas", price: 8.00 },
+                { id: "g5", name: "Arroz Chaufa", price: 6.50 },
+                { id: "g6", name: "Arroz Blanco", price: 5.00 },
+                { id: "g7", name: "Porción Papas Sancochadas", price: 5.00 }
+            ]
+        };
+
+        let ticketGlobalID = 1;
+        let activeTabIndex = 0;
+        let currentSystemMode = ""; 
+        let activeOrders = [];
+        let workingItem = null;
+        let activeCreamsSelection = {};
+
+        function initSystemWorkflow(mode) {
+            currentSystemMode = mode;
+            document.getElementById("app-welcome-screen").style.display = "none";
+            document.getElementById("app-main-workflow").style.display = "flex";
+            
+            const mainTrigger = document.getElementById("main-action-trigger");
+            if (mode === "Mesa") {
+                mainTrigger.innerText = "DESCARGAR TICKET (IMAGEN)";
+            } else {
+                mainTrigger.innerText = "IMPRIMIR TICKET (NORMAL)";
+            }
+
+            ticketGlobalID = 1;
+            activeTabIndex = 0;
+            activeOrders = Array.from({ length: 4 }, () => ({
+                id: ticketGlobalID++, 
+                customer: mode === "Mesa" ? "Mesa 1" : "", 
+                phone: "", address: "", 
+                type: mode === "Mesa" ? "Mesa" : "Delivery", 
+                deliveryCost: 0, payment: "Yape", cashPaid: 0, items: []
+            }));
+
+            renderInputsBasedOnMode();
+            buildInterface();
+            switchTab(0);
+        }
+
+        function resetToWelcomeScreen() {
+            document.getElementById("app-welcome-screen").style.display = "flex";
+            document.getElementById("app-main-workflow").style.display = "none";
+        }
+
+        function renderInputsBasedOnMode() {
+            let container = document.getElementById("data-input-zone");
+            if (currentSystemMode === "Mesa") {
+                container.innerHTML = `
+                    <div class="block-title">📌 1. Ubicación en Salón (Mesa)</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Seleccionar Mesa <span>*</span></label>
+                            <select id="sel-mesa-num" onchange="captureFormData()">
+                                <option value="Mesa 1">Mesa 1 🍽️</option>
+                                <option value="Mesa 2">Mesa 2 🍽️</option>
+                                <option value="Mesa 3">Mesa 3 🍽️</option>
+                                <option value="Mesa 4">Mesa 4 🍽️</option>
+                                <option value="Mesa 5">Mesa 5 🍽️</option>
+                                <option value="Mesa 6">Mesa 6 🍽️</option>
+                                <option value="Mesa 7">Mesa 7 🍽️</option>
+                                <option value="Mesa 8">Mesa 8 🍽️</option>
+                                <option value="Mesa 9">Mesa 9 🍽️</option>
+                                <option value="Mesa 10">Mesa 10 🍽️</option>
+                            </select>
+                        </div>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="block-title">📌 1. Estructura y Datos del Pedido</div>
+                    <div class="form-row">
+                        <div class="form-group" style="flex: 1.8;">
+                            <label>Nombre del Cliente <span>*</span></label>
+                            <input type="text" id="inp-name" placeholder="Ej. Juan Pérez" oninput="captureFormData()">
+                        </div>
+                        <div class="form-group">
+                            <label>Número Celular <span>*</span></label>
+                            <input type="text" id="inp-phone" placeholder="999999999" oninput="this.value = this.value.replace(/[^0-9]/g, ''); captureFormData();">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Canal de Destino</label>
+                            <select id="sel-type" onchange="handleDeliveryShift()">
+                                <option value="Delivery">Delivery 🛵</option>
+                                <option value="Recoger">Recoger 🛍️</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="group-delivery-cost" style="display:none;">
+                            <label>Costo Envío</label>
+                            <select id="sel-cost" onchange="captureFormData()">
+                                <option value="1">S/ 1.00</option><option value="2">S/ 2.00</option>
+                                <option value="3">S/ 3.00</option><option value="4">S/ 4.00</option>
+                                <option value="5">S/ 5.00</option><option value="6">S/ 6.00</option>
+                                <option value="7">S/ 7.00</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row" id="row-address" style="display:none;">
+                        <div class="form-group">
+                            <label>Dirección de Entrega <span>*</span></label>
+                            <input type="text" id="inp-address" placeholder="Av. Las Magnolias 123" oninput="captureFormData()">
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function buildInterface() {
+            Object.keys(DATABASE).forEach(catKey => {
+                const zone = document.getElementById(`grid-${catKey}`);
+                if (!zone) return;
+                zone.innerHTML = "";
+                DATABASE[catKey].forEach(prod => {
+                    const btn = document.createElement("button");
+                    btn.className = "prod-btn";
+                    
+                    if (prod.subType) {
+                        btn.innerHTML = `<div class="prod-title">${prod.name}</div><div class="prod-price action-needed">Escoger tamaño</div>`;
+                    } else {
+                        btn.innerHTML = `<div class="prod-title">${prod.name}</div><div class="prod-price">S/ ${prod.price.toFixed(2)}</div>`;
+                    }
+                    
+                    btn.onclick = () => processProductSelection(prod, catKey);
+                    zone.appendChild(btn);
+                });
+            });
+        }
+
+        function showCategory(catKey) {
+            document.querySelectorAll(".cat-toggle-btn").forEach(btn => btn.classList.remove("active"));
+            document.querySelectorAll(".products-grid").forEach(g => g.classList.remove("active"));
+            
+            document.getElementById(`cat-btn-${catKey}`).classList.add("active");
+            document.getElementById(`grid-${catKey}`).classList.add("active");
+        }
+
+        function switchTab(index) {
+            document.querySelectorAll(".tab-btn").forEach((btn, idx) => {
+                btn.classList.toggle("active", idx === index);
+            });
+            activeTabIndex = index;
+            populateFormFromMemory(activeOrders[index]);
+        }
+
+        function populateFormFromMemory(order) {
+            if (currentSystemMode === "Mesa") {
+                const selectMesa = document.getElementById("sel-mesa-num");
+                if (selectMesa) selectMesa.value = order.customer || "Mesa 1";
+            } else {
+                const inpName = document.getElementById("inp-name");
+                const inpPhone = document.getElementById("inp-phone");
+                const inpAddress = document.getElementById("inp-address");
+                const selType = document.getElementById("sel-type");
+                const selCost = document.getElementById("sel-cost");
+
+                if (inpName) inpName.value = order.customer;
+                if (inpPhone) inpPhone.value = order.phone;
+                if (inpAddress) inpAddress.value = order.address || "";
+                if (selType) selType.value = order.type;
+                if (selCost) selCost.value = order.deliveryCost || "1";
+                handleDeliveryShift(false);
+            }
+            const selPayment = document.getElementById("sel-payment");
+            const inpCash = document.getElementById("inp-cash");
+            
+            if (selPayment) selPayment.value = order.payment;
+            if (inpCash) inpCash.value = order.cashPaid || "";
+            
+            handlePaymentShift(false);
+            renderTicketView();
+        }
+
+        function captureFormData() {
+            let o = activeOrders[activeTabIndex];
+            if (!o) return;
+            
+            if (currentSystemMode === "Mesa") {
+                const selectMesa = document.getElementById("sel-mesa-num");
+                o.customer = selectMesa ? selectMesa.value : "Mesa 1";
+                o.type = "Mesa";
+                o.phone = "";
+                o.address = "";
+                o.deliveryCost = 0;
+            } else {
+                const inpName = document.getElementById("inp-name");
+                const inpPhone = document.getElementById("inp-phone");
+                const selType = document.getElementById("sel-type");
+                const inpAddress = document.getElementById("inp-address");
+                const selCost = document.getElementById("sel-cost");
+
+                o.customer = inpName ? inpName.value.trim() : "";
+                o.phone = inpPhone ? inpPhone.value.trim() : "";
+                o.type = selType ? selType.value : "Delivery";
+                o.address = (o.type === "Delivery" && inpAddress) ? inpAddress.value.trim() : "";
+                o.deliveryCost = (o.type === "Delivery" && selCost) ? parseFloat(selCost.value) : 0;
+            }
+
+            const selPayment = document.getElementById("sel-payment");
+            const inpCash = document.getElementById("inp-cash");
+
+            o.payment = selPayment ? selPayment.value : "Yape";
+            o.cashPaid = (o.payment === "Efectivo" && inpCash) ? parseFloat(inpCash.value) || 0 : 0;
+            
+            const tabElement = document.getElementById(`btn-tab-${activeTabIndex}`);
+            if (tabElement) {
+                tabElement.innerText = o.customer.length > 0 ? o.customer.toUpperCase() : `PEDIDO ${activeTabIndex + 1}`;
+            }
+
+            syncTaperCharges();
+            renderTicketView();
+        }
+
+        function handleDeliveryShift(triggerSync = true) {
+            if (currentSystemMode === "Mesa") return;
+            let selType = document.getElementById("sel-type");
+            if (!selType) return;
+            let type = selType.value;
+            
+            document.getElementById("group-delivery-cost").style.display = type === "Delivery" ? "flex" : "none";
+            document.getElementById("row-address").style.display = type === "Delivery" ? "flex" : "none";
+            if (triggerSync) captureFormData();
+        }
+
+        function handlePaymentShift(triggerSync = true) {
+            let selPayment = document.getElementById("sel-payment");
+            if (!selPayment) return;
+            let method = selPayment.value;
+            
+            document.getElementById("group-cash-amount").style.display = method === "Efectivo" ? "flex" : "none";
+            if (triggerSync) captureFormData();
+        }
+
+        function syncTaperCharges() {
+            let o = activeOrders[activeTabIndex];
+            if (!o) return;
+            let mustCharge = (o.type === "Recoger" || o.type === "Delivery");
+            o.items.forEach(item => {
+                if (item.appliesTaper) {
+                    item.taperPrice = mustCharge ? 1.00 : 0;
+                    item.totalPrice = item.basePrice + item.extraPrice + item.taperPrice;
+                }
+            });
+        }
+
+        function processProductSelection(product, category) {
+            let o = activeOrders[activeTabIndex];
+            let eligibleForTaper = ["combos", "broaster", "alitas", "parrillas", "brasa", "salchipapas"].includes(category);
+            let activeTaperFee = (eligibleForTaper && (o.type === "Recoger" || o.type === "Delivery")) ? 1.00 : 0;
+
+            workingItem = {
+                name: product.name, basePrice: product.price, extraPrice: 0, taperPrice: activeTaperFee, totalPrice: product.price + activeTaperFee, details: [], appliesTaper: eligibleForTaper, categoryRef: category, processedCreamsLine: "", comment: "", subType: product.subType || null
+            };
+
+            activeCreamsSelection = {};
+            ALL_CREAMS_LIST.forEach(c => activeCreamsSelection[c] = 0);
+
+            buildDynamicModal(product.name, category);
+        }
+
+        function cycleCreamState(creamName) {
+            let currentState = activeCreamsSelection[creamName] || 0;
+            let nextState = (currentState + 1) % 4; 
+            updateCreamUI(creamName, nextState);
+        }
+
+        function clearCreamRightClick(e, creamName) {
+            e.preventDefault();
+            updateCreamUI(creamName, 0);
+        }
+
+        function updateCreamUI(creamName, state) {
+            activeCreamsSelection[creamName] = state;
+            const btn = document.getElementById(`btn-cream-${creamName.replace(/\s/g, '-')}`);
+            if(!btn) return;
+
+            btn.className = "cream-cycle-btn";
+            if (state === 0) {
+                btn.innerText = creamName;
+            } else if (state === 1) {
+                btn.classList.add("state-normal");
+                btn.innerText = creamName;
+            } else if (state === 2) {
+                btn.classList.add("state-extra");
+                btn.innerText = `+ ${creamName}`;
+            } else if (state === 3) {
+                btn.classList.add("state-poco");
+                btn.innerText = `- ${creamName}`;
+            }
+        }
+
+        function massToggleCreamsSmart(category) {
+            ALL_CREAMS_LIST.forEach(c => { updateCreamUI(c, 0); });
+            let targetCreams = [];
+
+            if (category === "hamburguesas" || category === "broaster" || category === "salchipapas") {
+                targetCreams = [...CREAMS_CLASSIC];
+            } else if (category === "alitas") {
+                targetCreams = ["Acevichada", "Barbiquiu", "Ají"];
+            } else if (category === "brasa") {
+                targetCreams = ["Golf", "Mayonesa", "Ají Parrillero"];
+            } else if (category === "parrillas" || category === "combos") {
+                targetCreams = ["Ají Parrillero", "Rocoto"];
+            }
+
+            targetCreams.forEach(c => { updateCreamUI(c, 1); });
+        }
+
+        function buildDynamicModal(pName, category) {
+            document.getElementById("mod-product-title").innerText = pName;
+            let container = document.getElementById("mod-dynamic-fields");
+            let htmlStructure = "";
+
+            // OBSERVACIONES
+            htmlStructure += `
+            <div class="option-section" style="border-left: 4px solid #ffc107;">
+                <h4>Observaciones / Notas Especiales</h4>
+                <textarea id="txt-product-comment" class="comment-box" rows="2" placeholder="Ej. Sin cebolla, gaseosa helada, etc..."></textarea>
+            </div>`;
+
+            // CONDICIONAL PARA LOS DOS SUBTIPOS DE BEBIDAS
+            if (workingItem.subType) {
+                if (workingItem.subType === "fresco") {
+                    htmlStructure += `
+                    <div class="option-section">
+                        <h4>Selecciona la Medida (Precio Único)</h4>
+                        <div class="radio-group">
+                            <label><input type="radio" name="rad-medida" value="300ml" checked> 300ml</label>
+                            <label><input type="radio" name="rad-medida" value="500ml"> 500ml</label>
+                            <label><input type="radio" name="rad-medida" value="1L"> 1L</label>
+                        </div>
+                    </div>`;
+                } else if (workingItem.subType === "gaseosa") {
+                    let optionsHtml = "";
+                    let lowName = pName.toLowerCase();
+
+                    if (lowName === "coca" || lowName === "inka") {
+                        optionsHtml += `<label><input type="radio" name="rad-medida" value="Personal" data-p="3.00" checked> Personal (S/ 3.00)</label>`;
+                    }
+                    
+                    if (lowName === "inka") {
+                        optionsHtml += `<label><input type="radio" name="rad-medida" value="Gordita" data-p="5.00"> Gordita (S/ 5.00)</label>`;
+                    }
+
+                    if (lowName === "coca" || lowName === "inka") {
+                        optionsHtml += `<label><input type="radio" name="rad-medida" value="1/2L" data-p="4.00"> 1/2L (S/ 4.00)</label>`;
+                        optionsHtml += `<label><input type="radio" name="rad-medida" value="1L" data-p="7.50"> 1L (S/ 7.50)</label>`;
+                        optionsHtml += `<label><input type="radio" name="rad-medida" value="1 1/2L" data-p="9.00"> 1 1/2L (S/ 9.00)</label>`;
+                    } else if (lowName === "fanta" || lowName === "sprite") {
+                        optionsHtml += `<label><input type="radio" name="rad-medida" value="1/2L" data-p="3.50" checked> 1/2L (S/ 3.50)</label>`;
+                        optionsHtml += `<label><input type="radio" name="rad-medida" value="1 1/2L" data-p="8.00"> 1 1/2L (S/ 8.00)</label>`;
+                    }
+
+                    htmlStructure += `
+                    <div class="option-section">
+                        <h4>Selecciona la Medida</h4>
+                        <div class="radio-group">
+                            ${optionsHtml}
+                        </div>
+                    </div>`;
+                }
+            }
+
+            const noComplexModifiers = ["pizzas", "jugos", "frappes", "guarniciones"];
+            
+            if (!noComplexModifiers.includes(category) && !workingItem.subType) {
+                const renderCreamBtn = (c) => {
+                    let state = activeCreamsSelection[c] || 0;
+                    let cssClass = "cream-cycle-btn";
+                    let text = c;
+                    if (state === 1) { cssClass += " state-normal"; }
+                    else if (state === 2) { cssClass += " state-extra"; text = `+ ${c}`; }
+                    else if (state === 3) { cssClass += " state-poco"; text = `- ${c}`; }
+                    return `<button type="button" id="btn-cream-${c.replace(/\s/g, '-')}" class="${cssClass}" onclick="cycleCreamState('${c}')" oncontextmenu="clearCreamRightClick(event, '${c}')">${text}</button>`;
+                };
+
+                htmlStructure += `
+                    <div class="option-section">
+                        <h4>Cremas</h4>
+                        <button type="button" class="btn-modal btn-add" style="padding:6px 10px; font-size:10px; margin-bottom:12px; display:block; width:auto;" onclick="massToggleCreamsSmart('${category}')">✨ SELECCIONAR RECOMENDADAS</button>
+                        
+                        <h5 style="color:#555; font-size:10px; font-weight:800; margin-bottom:6px; letter-spacing:0.5px; text-transform:uppercase;">Clásicas</h5>
+                        <div class="creams-grid-layout" style="margin-bottom:14px;">
+                            ${CREAMS_CLASSIC.map(c => renderCreamBtn(c)).join('')}
+                        </div>
+
+                        <h5 style="color:#555; font-size:10px; font-weight:800; margin-bottom:6px; letter-spacing:0.5px; text-transform:uppercase;">Parrilleras</h5>
+                        <div class="creams-grid-layout">
+                            ${CREAMS_PARRILLERAS.map(c => renderCreamBtn(c)).join('')}
+                        </div>
+                    </div>`;
+
+                if (category === "broaster") {
+                    htmlStructure += `
+                    <div class="option-section">
+                        <h4>Selección de Presa</h4>
+                        <div class="radio-group">
+                            <label><input type="radio" name="rad-presa" value="Cualquiera" checked> Cualquiera</label>
+                            <label><input type="radio" name="rad-presa" value="Ala"> Ala</label>
+                            <label><input type="radio" name="rad-presa" value="Pecho"> Pecho</label>
+                            <label><input type="radio" name="rad-presa" value="Pierna"> Pierna</label>
+                            <label><input type="radio" name="rad-presa" value="Encuentro"> Encuentro</label>
+                        </div>
+                    </div>`;
+                }
+
+                if (category === "hamburguesas") {
+                    htmlStructure += `
+                    <div class="option-section">
+                        <h4>Tipo de Papa</h4>
+                        <div class="radio-group">
+                            <label><input type="radio" name="rad-papas" value="Papas Gruesas" checked> Papas Gruesas</label>
+                            <label><input type="radio" name="rad-papas" value="Papas al Hilo"> Papas al Hilo</label>
+                        </div>
+                    </div>`;
+                } else {
+                    htmlStructure += `
+                    <div class="option-section">
+                        <h4>Tipo de Papa</h4>
+                        <div class="radio-group">
+                            <label><input type="radio" name="rad-papas" value="Papas Fritas" checked> Papas Fritas</label>
+                            <label><input type="radio" name="rad-papas" value="Papas Sancochadas"> Papas Sancochadas</label>
+                        </div>
+                    </div>`;
+                }
+
+                if (["combos", "broaster", "parrillas", "brasa"].includes(category)) {
+                    htmlStructure += `
+                    <div class="option-section">
+                        <h4>Ensalada</h4>
+                        <div class="radio-group">
+                            <label><input type="radio" name="rad-ensalada" value="Con Ensalada" checked> Con Ensalada</label>
+                            <label><input type="radio" name="rad-ensalada" value="Sin Ensalada"> Sin Ensalada</label>
+                        </div>
+                    </div>`;
+                }
+
+                if (category !== "hamburguesas") {
+                    htmlStructure += `
+                    <div class="option-section">
+                        <h4>Cubiertos</h4>
+                        <div class="radio-group">
+                            <label><input type="radio" name="rad-cubiertos" value="Con Cubiertos"> Enviar Cubiertos</label>
+                            <label><input type="radio" name="rad-cubiertos" value="Sin Cubiertos" checked> No requiere</label>
+                        </div>
+                    </div>`;
+                }
+
+                htmlStructure += `
+                    <div class="option-section">
+                        <h4>Agregados Extra</h4>
+                        <div class="checkbox-group">
+                            <label><input type="checkbox" value="Huevo" data-cost="2.00" class="mod-extra-checkbox"> Huevo (+S/ 2.00)</label>
+                            <label><input type="checkbox" value="Plátano" data-cost="1.50" class="mod-extra-checkbox"> Plátano (+S/ 1.50)</label>
+                            <label><input type="checkbox" value="Queso" data-cost="2.00" class="mod-extra-checkbox"> Queso (+S/ 2.00)</label>
+                            <label><input type="checkbox" value="Hot Dog" data-cost="1.50" class="mod-extra-checkbox"> Hot dog (+S/ 1.50)</label>
+                            <label><input type="checkbox" value="Pollo Deshilachado" data-cost="2.50" class="mod-extra-checkbox"> Pollo Desh. (+S/ 2.50)</label>
+                            <label><input type="checkbox" value="Chorizo" data-cost="3.50" class="mod-extra-checkbox"> Chorizo (+S/ 3.50)</label>
+                            <label><input type="checkbox" value="Tocino" data-cost="3.00" class="mod-extra-checkbox"> Tocino (+S/ 3.00)</label>
+                            <label><input type="checkbox" value="Piña" data-cost="3.00" class="mod-extra-checkbox"> Piña (+S/ 3.00)</label>
+                            <label><input type="checkbox" value="Filete de Pollo" data-cost="3.50" class="mod-extra-checkbox"> Filete Pollo (+S/ 3.50)</label>
+                        </div>
+                    </div>`;
+            }
+
+            container.innerHTML = htmlStructure;
+            document.getElementById("modal-modifier").style.display = "flex";
+        }
+
+        function closeModifier() {
+            document.getElementById("modal-modifier").style.display = "none";
+            workingItem = null;
+        }
+
+        function commitProductToOrder() {
+            let details = [];
+            let cat = workingItem.categoryRef;
+
+            if (workingItem.subType) {
+                let medidaVal = document.querySelector('input[name="rad-medida"]:checked');
+                if (medidaVal) {
+                    details.push(`Medida: ${medidaVal.value}`);
+                    
+                    if (workingItem.subType === "gaseosa") {
+                        let parsedPrice = parseFloat(medidaVal.getAttribute("data-p"));
+                        workingItem.basePrice = parsedPrice;
+                    }
+                    workingItem.name = `${workingItem.name} ${medidaVal.value}`;
+                }
+            }
+
+            const noComplexModifiers = ["pizzas", "jugos", "frappes", "guarniciones"];
+
+            if (!noComplexModifiers.includes(cat) && !workingItem.subType) {
+                let presaVal = document.querySelector('input[name="rad-presa"]:checked');
+                if (presaVal) details.push(`Presa: ${presaVal.value}`);
+
+                let papaVal = document.querySelector('input[name="rad-papas"]:checked');
+                if (papaVal) details.push(papaVal.value);
+
+                let ensaladaVal = document.querySelector('input[name="rad-ensalada"]:checked');
+                if (ensaladaVal && ensaladaVal.value === "Con Ensalada") details.push("Con Ensalada");
+
+                let cubiertosVal = document.querySelector('input[name="rad-cubiertos"]:checked');
+                if (cubiertosVal && cubiertosVal.value === "Con Cubiertos") details.push("Con Cubiertos");
+
+                let extraCost = 0;
+                let extraNames = [];
+                document.querySelectorAll(".mod-extra-checkbox:checked").forEach(cb => {
+                    extraCost += parseFloat(cb.getAttribute("data-cost"));
+                    extraNames.push(cb.value);
+                });
+                if (extraNames.length > 0) details.push("Extras: " + extraNames.join(", "));
+
+                let baseEsperada = [];
+                if (cat === "hamburguesas" || cat === "broaster" || cat === "salchipapas") {
+                    baseEsperada = [...CREAMS_CLASSIC];
+                } else if (cat === "alitas") {
+                    baseEsperada = ["Acevichada", "Barbiquiu", "Ají"];
+                } else if (cat === "brasa") {
+                    baseEsperada = ["Golf", "Mayonesa", "Ají Parrillero"];
+                } else if (cat === "parrillas" || cat === "combos") {
+                    baseEsperada = ["Ají Parrillero", "Rocoto"];
+                }
+
+                let seleccionadasNormales = [];
+                let extrasAgregados = [];
+                let pocasMarcadas = [];
+                let ningunMarcado = true;
+
+                ALL_CREAMS_LIST.forEach(c => {
+                    let state = activeCreamsSelection[c] || 0;
+                    let abrv = CREAM_MAP[c] || c;
+
+                    if (state !== 0) ningunMarcado = false;
+                    if (state === 1) seleccionadasNormales.push(c);
+                    if (state === 2) extrasAgregados.push(`(+)${abrv}`);
+                    if (state === 3) pocasMarcadas.push(`(Poca)${abrv}`);
+                });
+
+                let esExactamenteBase = 
+                    baseEsperada.length === seleccionadasNormales.length && 
+                    baseEsperada.every(c => seleccionadasNormales.includes(c)) &&
+                    extrasAgregados.length === 0 && pocasMarcadas.length === 0;
+
+                let tieneTodaLaBaseActiva = baseEsperada.every(c => seleccionadasNormales.includes(c));
+                let finalCreamsStr = "";
+
+                if (ningunMarcado) {
+                    finalCreamsStr = "SIN CREMAS";
+                } else if (esExactamenteBase) {
+                    finalCreamsStr = "TODAS";
+                } else if (tieneTodaLaBaseActiva) {
+                    let adicionalesFueraDeBase = [];
+                    ALL_CREAMS_LIST.forEach(c => {
+                        let state = activeCreamsSelection[c] || 0;
+                        let abrv = CREAM_MAP[c] || c;
+                        if (!baseEsperada.includes(c) && state === 1) adicionalesFueraDeBase.push(abrv);
+                    });
+
+                    let totalMods = [...adicionalesFueraDeBase, ...extrasAgregados, ...pocasMarcadas].join(', ');
+                    finalCreamsStr = totalMods.length > 0 ? `TODAS, ${totalMods}` : "TODAS";
+                } else {
+                    let partes = [];
+                    let cortasNormales = [];
+                    ALL_CREAMS_LIST.forEach(c => {
+                        let state = activeCreamsSelection[c] || 0;
+                        let abrv = CREAM_MAP[c] || c;
+                        if (state === 1) cortasNormales.push(abrv);
+                    });
+
+                    if (cortasNormales.length > 0) partes.push(cortasNormales.join(', '));
+                    if (extrasAgregados.length > 0) partes.push(extrasAgregados.join(', '));
+                    if (pocasMarcadas.length > 0) partes.push(pocasMarcadas.join(', '));
+                    finalCreamsStr = partes.join(', ');
+                }
+
+                workingItem.processedCreamsLine = finalCreamsStr;
+                workingItem.extraPrice = extraCost;
+            }
+
+            workingItem.totalPrice = workingItem.basePrice + (workingItem.extraPrice || 0) + workingItem.taperPrice;
+
+            const commentArea = document.getElementById("txt-product-comment");
+            if (commentArea) {
+                workingItem.comment = commentArea.value.trim();
+            }
+
+            workingItem.details = details;
+            activeOrders[activeTabIndex].items.push(workingItem);
+            closeModifier();
+            renderTicketView();
+        }
+
+        function removeProductFromTicket(itemIndex) {
+            activeOrders[activeTabIndex].items.splice(itemIndex, 1);
+            syncTaperCharges();
+            renderTicketView();
+        }
+
+        function wrapText(text, maxChars = 36, indent = "      ") {
+            let words = text.split(" ");
+            let lines = [];
+            let currentLine = "";
+
+            words.forEach(word => {
+                if ((currentLine + word).length <= maxChars) {
+                    currentLine += (currentLine === "" ? "" : " ") + word;
+                } else {
+                    if (currentLine !== "") lines.push(currentLine);
+                    currentLine = word;
+                }
+            });
+            if (currentLine !== "") lines.push(currentLine);
+
+            return lines.map((line, index) => index === 0 ? line : indent + line).join("\n");
+        }
+
+        function generatePlainTextTicket(o) {
+            let now = new Date();
+            let timeStr = now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true });
+            let dateStr = now.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+            let txt = `======================================\n`;
+            txt += `              BURGERHAN               \n`;
+            txt += `======================================\n`;
+            txt += `TICKET : #${o.id}\n`;
+            txt += `FECHA  : ${dateStr} ${timeStr}\n`;
+            txt += `--------------------------------------\n`;
+            
+            if (currentSystemMode === "Mesa") {
+                txt += `MESA   : ${o.customer || 'Mesa 1'}\n`;
+            } else {
+                txt += `CLIENTE: ${o.customer || '(Falta Nombre)'}\n`;
+                if (o.phone) txt += `CELULAR: ${o.phone}\n`;
+                if (o.type === "Delivery") txt += `DIR.   : ${o.address || '(Falta Dirección)'}\n`;
+            }
+            
+            txt += `ATENCION: ${o.type.toUpperCase()}\n`;
+            txt += `======================================\n`;
+            txt += `CANT  DESCRIPCION              IMPORTE\n`;
+            txt += `--------------------------------------\n`;
+
+            let accumulatedTotal = 0;
+            
+            o.items.forEach((item) => {
+                let basePlusExtras = item.basePrice + (item.extraPrice || 0);
+                let priceStr = basePlusExtras.toFixed(2);
+                
+                txt += ` 1    ${item.name.padEnd(23)} S/ ${priceStr.padStart(5)}\n`;
+                
+                item.details.forEach(det => { 
+                    txt += `      ${wrapText(`* ${det}`, 30, "      ")}\n`; 
+                });
+
+                if (item.processedCreamsLine) {
+                    txt += `      ${wrapText(`* Cremas: ${item.processedCreamsLine}`, 30, "      ")}\n`;
+                }
+
+                if (item.comment) {
+                    txt += `      ${wrapText(`Nota: ${item.comment}`, 30, "      ")}\n`;
+                }
+
+                if (item.taperPrice > 0) {
+                    let taperStr = item.taperPrice.toFixed(2);
+                    txt += `      ${"-> Adicional Táper".padEnd(23)} S/ ${taperStr.padStart(5)}\n`;
+                }
+
+                accumulatedTotal += item.totalPrice;
+            });
+
+            txt += `--------------------------------------\n`;
+            if (o.type === "Delivery" && o.deliveryCost > 0) {
+                let dCost = o.deliveryCost.toFixed(2);
+                txt += ` 1    Envío Delivery          S/ ${dCost.padStart(5)}\n`;
+                accumulatedTotal += o.deliveryCost;
+                txt += `--------------------------------------\n`;
+            }
+
+            txt += `TOTAL A PAGAR:                S/ ${accumulatedTotal.toFixed(2).padStart(5)}\n`;
+            txt += `======================================\n`;
+            txt += `PAGO: ${o.payment.toUpperCase()}\n`;
+
+            if (o.payment === "Efectivo") {
+                txt += `RECIBIDO:                     S/ ${o.cashPaid.toFixed(2).padStart(5)}\n`;
+                let changeValue = o.cashPaid - accumulatedTotal;
+                txt += `VUELTO  :                     S/ ${(changeValue > 0 ? changeValue : 0).toFixed(2).padStart(5)}\n`;
+            }
+
+            txt += `\n       GRACIAS POR SU COMPRA\n\n\n\n`;
+            return txt;
+        }
+
+        function renderTicketView() {
+            let o = activeOrders[activeTabIndex];
+            if (!o) return;
+            
+            let now = new Date();
+            let timeStr = now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true });
+            let dateStr = now.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+            const targetView = document.getElementById("ticket-render");
+            if (!targetView) return;
+            targetView.innerHTML = "";
+
+            let headerText = `======================================\n`;
+            headerText += `              BURGERHAN               \n`;
+            headerText += `======================================\n`;
+            headerText += `TICKET : #${o.id}\n`;
+            headerText += `FECHA  : ${dateStr} ${timeStr}\n`;
+            headerText += `--------------------------------------\n`;
+            
+            if (currentSystemMode === "Mesa") {
+                headerText += `MESA   : ${o.customer || 'Mesa 1'}\n`;
+            } else {
+                headerText += `CLIENTE: ${o.customer || '(Falta Nombre)'}\n`;
+                if (o.phone) headerText += `CELULAR: ${o.phone}\n`;
+                if (o.type === "Delivery") headerText += `DIR.   : ${o.address || '(Falta Dirección)'}\n`;
+            }
+            
+            headerText += `ATENCION: ${o.type.toUpperCase()}\n`;
+            headerText += `======================================\n`;
+            headerText += `CANT  DESCRIPCION              IMPORTE\n`;
+            headerText += `--------------------------------------\n`;
+
+            let preBlock = document.createElement("pre");
+            preBlock.innerText = headerText;
+            targetView.appendChild(preBlock);
+
+            let accumulatedTotal = 0;
+            
+            o.items.forEach((item, index) => {
+                let basePlusExtras = item.basePrice + (item.extraPrice || 0);
+                let priceStr = basePlusExtras.toFixed(2);
+                
+                let lineContainer = document.createElement("div");
+                lineContainer.className = "ticket-interactive-line";
+                
+                let innerText = ` 1    ${item.name.padEnd(23)} S/ ${priceStr.padStart(5)}\n`;
+                
+                item.details.forEach(det => { 
+                    innerText += `      ${wrapText(`* ${det}`, 30, "      ")}\n`; 
+                });
+
+                if (item.processedCreamsLine) {
+                    innerText += `      ${wrapText(`* Cremas: ${item.processedCreamsLine}`, 30, "      ")}\n`;
+                }
+
+                if (item.comment) {
+                    innerText += `      ${wrapText(`Nota: ${item.comment}`, 30, "      ")}\n`;
+                }
+
+                if (item.taperPrice > 0) {
+                    let taperStr = item.taperPrice.toFixed(2);
+                    innerText += `      ${"-> Adicional Táper".padEnd(23)} S/ ${taperStr.padStart(5)}\n`;
+                }
+
+                let textBlock = document.createElement("pre");
+                textBlock.innerText = innerText;
+                lineContainer.appendChild(textBlock);
+
+                let deleteBtn = document.createElement("button");
+                deleteBtn.className = "ticket-delete-trigger";
+                deleteBtn.innerText = "X";
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    removeProductFromTicket(index);
+                };
+                lineContainer.appendChild(deleteBtn);
+
+                targetView.appendChild(lineContainer);
+                accumulatedTotal += item.totalPrice;
+            });
+
+            let footerText = `--------------------------------------\n`;
+            if (o.type === "Delivery" && o.deliveryCost > 0) {
+                let dCost = o.deliveryCost.toFixed(2);
+                footerText += ` 1    Envío Delivery          S/ ${dCost.padStart(5)}\n`;
+                accumulatedTotal += o.deliveryCost;
+                footerText += `--------------------------------------\n`;
+            }
+
+            footerText += `TOTAL A PAGAR:                S/ ${accumulatedTotal.toFixed(2).padStart(5)}\n`;
+            footerText += `======================================\n`;
+            footerText += `PAGO: ${o.payment.toUpperCase()}\n`;
+
+            if (o.payment === "Efectivo") {
+                footerText += `RECIBIDO:                     S/ ${o.cashPaid.toFixed(2).padStart(5)}\n`;
+                let changeValue = o.cashPaid - accumulatedTotal;
+                footerText += `VUELTO  :                     S/ ${(changeValue > 0 ? changeValue : 0).toFixed(2).padStart(5)}\n`;
+            }
+
+            footerText += `\n       GRACIAS POR SU COMPRA\n`;
+            
+            let footerBlock = document.createElement("pre");
+            footerBlock.innerText = footerText;
+            targetView.appendChild(footerBlock);
+        }
+
+        function executePrint() {
+            let o = activeOrders[activeTabIndex];
+            if (!o) return;
+            
+            if (currentSystemMode === "Delivery") {
+                if (!o.customer) { alert("❌ ERROR: El campo 'Nombre del Cliente' es obligatorio."); return; }
+                if (!o.phone) { alert("❌ ERROR: El campo 'Número Celular' es obligatorio."); return; }
+                if (o.type === "Delivery" && !o.address) { alert("❌ ERROR: La 'Dirección de Entrega' es obligatoria para Delivery."); return; }
+            }
+            if (o.items.length === 0) { alert("⚠️ ATENCIÓN: No puedes procesar un ticket vacío."); return; }
+
+            if (currentSystemMode === "Mesa") {
+                let cleanTicketString = generatePlainTextTicket(o);
+                let targetMirror = document.getElementById("bloque-render-imagen-oculto");
+                if (!targetMirror) return;
+                targetMirror.innerHTML = `<pre>${cleanTicketString}</pre>`;
+
+                html2canvas(targetMirror, {
+                    backgroundColor: "#ffffff",
+                    scale: 2,
+                    logging: false
+                }).then(canvas => {
+                    let imgLink = document.createElement('a');
+                    imgLink.download = `Ticket-${o.customer}-N${o.id}.png`;
+                    imgLink.href = canvas.toDataURL("image/png");
+                    document.body.appendChild(imgLink);
+                    imgLink.click();
+                    document.body.removeChild(imgLink);
+
+                    targetMirror.innerHTML = "";
+                    clearCurrentOrder(true);
+                }).catch(err => {
+                    alert("🚨 Error al procesar imagen de mesa: " + err);
+                });
+            } else {
+                window.print();
+                clearCurrentOrder(true);
+            }
+        }
+
+        function clearCurrentOrder(autoIncrement = false) {
+            let nextID = autoIncrement ? ticketGlobalID++ : activeOrders[activeTabIndex].id;
+            activeOrders[activeTabIndex] = {
+                id: nextID, 
+                customer: currentSystemMode === "Mesa" ? "Mesa 1" : "", 
+                phone: "", address: "", 
+                type: currentSystemMode === "Mesa" ? "Mesa" : "Delivery", 
+                deliveryCost: 0, payment: "Yape", cashPaid: 0, items: []
+            };
+            
+            let tabElement = document.getElementById(`btn-tab-${activeTabIndex}`);
+            if (tabElement) {
+                tabElement.innerText = currentSystemMode === "Mesa" ? "MESA 1" : `PEDIDO ${activeTabIndex + 1}`;
+            }
+            populateFormFromMemory(activeOrders[activeTabIndex]);
+        }
+
+        setInterval(() => {
+            let d = new Date();
+            let liveClockEl = document.getElementById("live-clock");
+            if (liveClockEl) {
+                liveClockEl.innerText = "CONECTADO A NUBE | " + d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
